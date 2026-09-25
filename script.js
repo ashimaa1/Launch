@@ -318,9 +318,9 @@ const CHART_COLORS = {
   navy: "#11212C",
 };
 
-// Sets up a canvas's backing resolution to match its CSS size * devicePixelRatio,
-// so drawing stays crisp on high-DPI screens. Returns the CSS-pixel {width,height}
-// to draw with (the context is pre-scaled, so drawing code just uses CSS pixels).
+//“This sets the canvas’s real pixel size to match its CSS size × the device’s pixel ratio.
+//That way the drawing looks sharp on high‑DPI screens.
+//It returns the CSS width and height you should use when drawing, because the context is already scaled for you.”.
 function prepareCanvas(canvas) {
   const rect = canvas.getBoundingClientRect();
   const width = Math.max(rect.width, 1);
@@ -528,13 +528,10 @@ function getCounty(id) {
 function computeScore(county, businessType, employees, rent, annualRent, annualPayroll) {
   const household = clamp(((county.income - 65000) / 55000) * 70 + (county.growth / 15) * 30, 0, 100);
 
-  // Labor cost headroom blends two things:
-  //  (1) marketFit — the county/business-type wage environment (unchanged by your plan)
-  //  (2) planFit — how efficiently YOUR staffing + rent plan uses that environment,
-  //      via rent-per-employee and headcount relative to a lean 2-person baseline.
-  // Blending them means the score always visibly responds to the plan inputs,
-  // instead of being swamped by the market component.
-  const wagePressure = (county.wage - 1000) / 3.2;
+ // Labor cost headroom mixes the county’s wage environment with how efficient your staffing + rent plan is.
+//This blend makes sure the score changes when you change your plan.”
+  
+   const wagePressure = (county.wage - 1000) / 3.2;
   const businessTypePressure = (businessType.multiplier - 1) * 55;
   const marketFit = clamp(100 - wagePressure - businessTypePressure, 0, 100);
 
