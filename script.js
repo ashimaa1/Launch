@@ -1,25 +1,18 @@
 /* ==========================================================================
-   SmallBizBoost RI — script.js
+   Rhode Launch — script.js
    Plain vanilla JavaScript. No frameworks, no external libraries.
-   Sections below, in load order:
-     1. Static/curated data (counties, resources directory, business types)
+   The code loads in the order:
+     1. Some datas (counties, resources directory, business types)
      2. Live data fetching (Census ACS, Census CBP, BLS LAUS) + fallback
-     3. Chart rendering (hand-written Canvas 2D — no charting library)
-     4. App state, rendering, and event wiring
+     3. Chart rendering (hand-written Canvas 2D)
+     4. Running the App,Updating the screen, and connecting the buttons and events.
    ========================================================================== */
 
-/* ------------------------------------------------------------------------
-   data.js
-   Static / curated data: county metadata, the resources directory, business
-   types, and a FALLBACK economic dataset used only if the live Census/BLS
-   fetch fails (offline, rate-limited, CORS issue, etc). Everything under
-   FALLBACK_ECONOMIC_DATA is clearly labeled as such in the UI when it's
-   the data actually being shown.
-   ------------------------------------------------------------------------ */
+
 
 const STATE_FIPS = "44"; // Rhode Island
 
-// County id -> 3-digit county FIPS code (used to build Census/BLS queries)
+// County id : 3-digit county FIPS code (used to build Census/BLS queries)
 const COUNTY_FIPS = {
   bristol: "001",
   kent: "003",
@@ -36,7 +29,7 @@ const COUNTIES_META = [
   { id: "washington", name: "Washington County", note: "Highest household income and lowest unemployment — the calmest labor market on the map." },
 ];
 
-// Used only when a live fetch fails. Roughly representative, NOT live.
+// Used only when a live fetch fails. 
 const FALLBACK_ECONOMIC_DATA = {
   bristol: { income: 88100, priorIncome: 82400, population: 48500, establishments: 1840, selfEmployed: 10.5, wage: 1160, unemployment: 3.8 },
   kent: { income: 85200, priorIncome: 79100, population: 166000, establishments: 5230, selfEmployed: 9.1, wage: 1190, unemployment: 3.6 },
@@ -54,7 +47,7 @@ const BUSINESS_TYPES = [
   { id: "health", name: "Health & wellness", multiplier: 1.1 },
 ];
 
-// Metrics available on the County Snapshot page. `key` must match a field
+// Metrics available on the County Snapshot page. "key" must match a field
 // produced by api.js (see buildCountyRecord).
 const METRICS = [
   { id: "income", label: "Median household income", fmt: (v) => `$${Math.round(v).toLocaleString()}` },
@@ -66,11 +59,8 @@ const METRICS = [
   { id: "population", label: "Population", fmt: (v) => Math.round(v).toLocaleString() },
 ];
 
-// Curated resources directory — no open public API exists for this, so it
-// stays hand-maintained. Every entry below was checked against the org's
-// own site/contact page. (Two entries that couldn't be verified —
-// Community Investment Corporation and East Bay Community Loan Fund —
-// were removed rather than shipped unconfirmed.)
+// “This list of resources is hand‑made because there is no public API for it.
+//Every item was checked directly on the organization’s own website to make sure the information is correct.
 const RESOURCES = [
   { tag: "SBA Counseling", name: "Rhode Island Small Business Development Center (RISBDC)", desc: "Free one-on-one business counseling, formation guidance and financial projection review.", addr: "URI Providence Campus, 80 Washington St, Providence", phone: "(401) 874-7232", county: "providence", website: "https://web.uri.edu/risbdc/" },
   { tag: "SBA Counseling", name: "SBA Rhode Island District Office", desc: "Loan program guidance (7(a), 504, microloan) and lender matchmaking.", addr: "380 Westminster St, Providence", phone: "(401) 528-4561", county: "providence", website: "https://www.sba.gov/district/rhode-island" },
@@ -81,8 +71,6 @@ const RESOURCES = [
   { tag: "Chamber", name: "Central RI Chamber of Commerce", desc: "Serves Warwick, West Warwick, Coventry and East Greenwich businesses.", addr: "3288 Post Rd, Warwick", phone: "(401) 732-1100", county: "kent", website: "https://www.centralrichamber.com/" },
   { tag: "Chamber", name: "Newport County Chamber of Commerce", desc: "Tourism-season marketing co-ops and hospitality workforce referrals.", addr: "35 Valley Rd, Middletown", phone: "(401) 847-1608", county: "newport", website: "https://www.newportchamber.com/" },
   { tag: "Mentoring", name: "Aquidneck Island SCORE Chapter", desc: "Local chapter pairing seasonal and hospitality founders with retired mentors.", addr: "24 Mill St, Newport", phone: "(401) 226-0077", county: "newport", website: "https://www.score.org/ri/" },
-  // Corrected: "Bristol County Chamber of Commerce" was renamed/merged into
-  // "East Bay Chamber of Commerce" in 1998; real address is Warren, RI.
   { tag: "Chamber", name: "East Bay Chamber of Commerce", desc: "Local networking, Main Street promotion and municipal permitting contacts for Bristol, Warren and Barrington.", addr: "16 Cutler St, Warren", phone: "(401) 245-0750", county: "bristol", website: "https://www.eastbaychamberri.org/" },
   { tag: "Chamber", name: "South County Chamber of Commerce", desc: "Seasonal-business planning and shared marketing for the South County coast.", addr: "4808 Tower Hill Rd, Wakefield", phone: "(401) 783-2801", county: "washington", website: "https://www.srichamber.com/" },
 ];
@@ -103,21 +91,10 @@ function resourceCountForCounty(countyId) {
      - Median earnings (-> est. weekly wage)  -> Census ACS 5-Year API
      - Business establishments                -> Census County Business Patterns API
      - Unemployment rate                      -> BLS LAUS API
+     
+   Uses my Census API key for live ACS/CBP data.
+   If the key is missing, the app falls back to the cached data in data.js.
 
-   *** CENSUS_API_KEY IS REQUIRED, NOT OPTIONAL ***
-   In practice, Census now appears to redirect (302) unauthenticated data
-   queries rather than serve them directly, and that redirect response
-   doesn't carry CORS headers — so the browser reports it as a blocked
-   cross-origin request. Get a free key (instant, just an email address)
-   at https://api.census.gov/data/key_signup.html and paste it into
-   CENSUS_API_KEY below. Without it, every Census call here will fail and
-   the site will run entirely on the cached fallback snapshot in data.js.
-
-   BLS's LAUS API does not require a key for this volume of requests.
-
-   If ANY individual call fails (offline, CORS, rate limit, changed vintage
-   year, etc.) that specific metric silently falls back to the static
-   snapshot in data.js and gets flagged so the UI can show "cached data".
    ------------------------------------------------------------------------ */
 
 const CENSUS_API_KEY = "47d157768272a26f195d448b5913630c15f1531f"; // REQUIRED — paste your free key from https://api.census.gov/data/key_signup.html
@@ -184,8 +161,7 @@ async function fetchPriorIncome(year) {
 }
 
 async function fetchSelfEmployedShare(year) {
-  // DP03_0026PE: percent of civilian employed pop. 16+ that is self-employed
-  // in their own not-incorporated business, ACS Data Profile table.
+  // “This number shows what percent of workers (16+) are self‑employed in their own non‑incorporated business.”
   const url = withKey(
     `https://api.census.gov/data/${year}/acs/acs5/profile?get=DP03_0026PE&for=county:*&in=state:${STATE_FIPS}`
   );
@@ -194,9 +170,10 @@ async function fetchSelfEmployedShare(year) {
 }
 
 async function fetchMedianEarnings(year) {
-  // B20002_001E: median earnings in the past 12 months for workers 16+ with earnings.
-  // We divide by 52 as a rough proxy for average weekly wage (NOT the same
-  // methodology as BLS QCEW, which needs a registered key + industry series).
+  // “This value is median yearly earnings for workers 16+.
+//We divide by 52 to get an approximate weekly wage.
+//It’s just an estimate, not the official BLS method.”
+   
   const url = withKey(
     `https://api.census.gov/data/${year}/acs/acs5?get=B20002_001E&for=county:*&in=state:${STATE_FIPS}`
   );
@@ -212,12 +189,8 @@ async function fetchEstablishments(year) {
   return indexByCountyFips(rows, 0);
 }
 
-// BLS LAUS county unemployment rate, latest available month.
-// Series ID format: LAUCN + state FIPS(2) + county FIPS(3) + "0000000003"
-// NOTE: the "?latest=true" query parameter is only reliably honored for
-// registered/keyed v2 requests. Unregistered GET requests should hit the
-// bare endpoint instead — BLS returns periods in reverse chronological
-// order, so data[0] is the most recent value.
+//“This gets the latest county unemployment rate from BLS.
+//The special "latest=true" option only works with a registered key, so for normal requests we just read the first row because BLS sends the newest data first".
 async function fetchUnemploymentRate(countyFips) {
   const seriesId = `LAUCN${STATE_FIPS}${countyFips}0000000003`;
   const url = `https://api.bls.gov/publicAPI/v2/timeseries/data/${seriesId}`;
