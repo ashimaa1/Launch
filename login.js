@@ -1,6 +1,8 @@
 /* ------------------------------------------------------------------------
    login.js — animated county-index chart + sign-in / sign-up form behavior
-   No backend is wired up. Swap the TODO in handleSubmit() for a real call.
+“This login page is only pretend. The submit button doesn’t actually talk to a server. 
+You need to replace the placeholder code with a real login request.”  
+  Swap the TODO in handleSubmit() for a real call.
    ------------------------------------------------------------------------ */
 
 const $ = (sel, root = document) => root.querySelector(sel);
