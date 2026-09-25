@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign in — SmallBizBoost RI</title>
+<meta name="description" content="Sign in to SmallBizBoost RI, the county-by-county formation climate estimator for Rhode Island." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="login.css" />
+</head>
+<body class="login-body">
+
+<div class="login-shell">
+
+  <!-- ============================ FORM SIDE ============================ -->
+  <div class="login-panel">
+    <a href="index.html" class="logo-btn" style="margin-bottom:48px;">
+      <span class="logo-icon">⚓</span>
+      <span>
+        <div class="logo-text-main">SmallBizBoost RI</div>
+        <div class="logo-text-sub">FORMATION CLIMATE DATA</div>
+      </span>
+    </a>
+
+    <div class="login-form-wrap">
+      <div class="login-tabs">
+        <button class="login-tab active" data-mode="signin" type="button">Sign in</button>
+        <button class="login-tab" data-mode="signup" type="button">Create account</button>
+      </div>
+
+      <h1 class="login-title" id="login-title">Welcome back.</h1>
+      <p class="login-sub" id="login-sub">Sign in to save counties, plans and scores as you compare them.</p>
+
+      <form id="login-form" novalidate>
+        <div class="field-group" id="field-name" style="display:none;">
+          <label class="field-label" for="name-input">Name</label>
+          <input class="text-input" type="text" id="name-input" autocomplete="name" placeholder="Jordan Alvarez" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="email-input">Email</label>
+          <input class="text-input" type="email" id="email-input" autocomplete="email" placeholder="you@business.com" required />
+        </div>
+
+        <div class="field-group">
+          <div class="slider-row" style="margin-bottom:8px;">
+            <label class="field-label" for="password-input" style="margin:0;">Password</label>
+            <button type="button" class="pw-toggle" id="pw-toggle">Show</button>
+          </div>
+          <input class="text-input" type="password" id="password-input" autocomplete="current-password" placeholder="••••••••••" required />
+        </div>
+
+        <div class="login-row-between" id="signin-extras">
+          <label class="remember-label"><input type="checkbox" id="remember-check" /> Remember me</label>
+          <button type="button" class="link-btn" id="forgot-btn">Forgot password?</button>
+        </div>
+
+        <p class="form-note" id="form-note"></p>
+
+        <button type="submit" class="btn btn-dark btn-full" id="submit-btn">Sign in →</button>
+      </form>
+
+      <p class="login-fineprint">Accounts here are stored in this browser only (no server) — good for trying out the flow, not for real users. See the note at the top of <span class="mono">auth.js</span> before you launch this.</p>
+    </div>
+  </div>
+
+  <!-- ============================ VISUAL SIDE ============================ -->
+  <div class="login-visual">
+    <div class="visual-ticker-wrap">
+      <div class="ticker" id="visual-ticker"></div>
+    </div>
+
+    <div class="visual-inner">
+      <div class="eyebrow">RHODE ISLAND / FIVE COUNTIES / LIVE DATA</div>
+      <h2 class="visual-headline">Every county tells a different story.</h2>
+      <p class="visual-lede">Household income, labor cost headroom, market depth, institutional support and labor stability — watch how five counties diverge.</p>
+
+      <div class="chart-frame">
+        <canvas id="pulse-chart"></canvas>
+        <div class="chart-legend" id="pulse-legend"></div>
+      </div>
+
+      <div class="stat-chip-row" id="stat-chips"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="auth.js"></script>
+<script src="login.js"></script>
+</body>
+</html>

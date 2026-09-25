@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SmallBizBoost RI — Rhode Island formation climate estimator</title>
+<meta name="description" content="Know the local economy before you sign the lease. County-by-county formation climate estimator for Rhode Island, built on live Census and BLS data." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<script>
+  // Gate this page behind sign-in. Runs before the rest of the page renders.
+  if (!localStorage.getItem("sbri_session")) {
+    window.location.href = "login.html";
+  }
+</script>
+
+<header class="site-header">
+  <div class="header-inner">
+    <button class="logo-btn" id="logo-link" aria-label="Go to estimator">
+      <span class="logo-icon">⚓</span>
+      <span>
+        <div class="logo-text-main">SmallBizBoost RI</div>
+        <div class="logo-text-sub">FORMATION CLIMATE DATA</div>
+      </span>
+    </button>
+    <nav class="nav-desktop">
+      <button class="nav-pill" data-page="home">Estimator</button>
+      <button class="nav-pill" data-page="counties">County snapshot</button>
+      <button class="nav-pill" data-page="resources">Resources</button>
+      <button class="nav-pill" data-page="saved">Saved scores</button>
+      <button class="btn btn-outline btn-sm" id="auth-link" style="margin-left:8px;">Sign out</button>
+    </nav>
+    <button class="mobile-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+  <div id="mobile-menu" class="hidden">
+    <button class="nav-pill" data-page="home">Estimator</button>
+    <button class="nav-pill" data-page="counties">County snapshot</button>
+    <button class="nav-pill" data-page="resources">Resources</button>
+    <button class="nav-pill" data-page="saved">Saved scores</button>
+    <button class="btn btn-outline btn-sm" id="auth-link-mobile" style="margin-top:4px;">Sign out</button>
+  </div>
+  <div id="data-status" class="data-status"></div>
+</header>
+
+<main>
+
+  <!-- ============================ HOME / ESTIMATOR ============================ -->
+  <section id="page-home">
+    <div class="hero">
+      <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1600&q=60')"></div>
+      <div class="hero-overlay"></div>
+      <div class="ticker-wrap" style="position:relative;">
+        <div class="ticker" id="ticker"></div>
+      </div>
+      <div class="hero-inner">
+        <div class="eyebrow">RHODE ISLAND / OPEN DATA / FIVE COUNTIES</div>
+        <h1 class="headline">Know the local economy <span class="underline-rust">before</span> you sign the lease.</h1>
+        <p class="hero-lede">SmallBizBoost RI turns Census income data, BLS labor data and the real map of chambers, SBA counselors and lenders into one transparent formation climate score — county by county.</p>
+        <div class="hero-ctas">
+          <a href="#plan-card" class="btn btn-cream" id="run-estimator-link">Run the estimator →</a>
+          <button class="btn btn-outline-dark" id="compare-counties-btn">Compare counties</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-section">
+      <div class="card card-shadow" id="plan-card">
+        <h2>Your plan</h2>
+        <div class="grid-2">
+          <div>
+            <label class="field-label" for="county-select">County</label>
+            <select id="county-select"></select>
+          </div>
+          <div>
+            <label class="field-label" for="business-select">Business type</label>
+            <select id="business-select"></select>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:24px;">
+          <div>
+            <div class="slider-row">
+              <label class="field-label" for="rent-slider" style="margin:0;">Monthly rent budget</label>
+              <span class="mono" id="rent-value">$3,000</span>
+            </div>
+            <input type="range" id="rent-slider" min="500" max="8000" step="100" value="3000" />
+          </div>
+          <div>
+            <div class="slider-row">
+              <label class="field-label" for="employees-slider" style="margin:0;">Employees at opening</label>
+              <span class="mono" id="employees-value">2</span>
+            </div>
+            <input type="range" id="employees-slider" min="0" max="10" step="1" value="2" />
+          </div>
+        </div>
+
+        <div class="rows">
+          <div class="row"><span class="muted">Estimated annual payroll</span><span class="value" id="row-payroll">—</span></div>
+          <div class="row"><span class="muted">Annual rent</span><span class="value" id="row-rent">—</span></div>
+          <div class="row bold"><span class="muted">First-year fixed cost floor</span><span class="value" id="row-costfloor">—</span></div>
+        </div>
+        <p class="note" id="payroll-note"></p>
+      </div>
+
+      <div class="score-band">
+        <div class="eyebrow" id="score-eyebrow" style="margin-bottom:12px;"></div>
+        <div class="score-top">
+          <div class="score-number" id="score-number">—</div>
+          <span class="badge" id="score-badge"></span>
+        </div>
+        <p id="score-note"></p>
+        <p id="county-note"></p>
+        <button class="btn btn-outline-dark btn-sm" id="save-score-btn" style="margin-top:20px;">☆ Save this score</button>
+        <p class="save-score-note" id="save-score-note"></p>
+      </div>
+
+      <div class="card">
+        <h3>How the score was computed</h3>
+        <div class="breakdown-grid">
+          <div>
+            <div class="score-bar">
+              <div class="score-bar-top"><strong>Household demand</strong><span class="mono muted" id="val-household">—</span></div>
+              <div class="score-bar-track"><div class="score-bar-fill" id="bar-household" style="width:0%"></div></div>
+              <div class="small muted">ACS median household income + 5-year income growth</div>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar-top"><strong>Labor cost headroom</strong><span class="mono muted" id="val-labor">—</span></div>
+              <div class="score-bar-track"><div class="score-bar-fill" id="bar-labor" style="width:0%"></div></div>
+              <div class="small muted">ACS-derived average weekly wage, adjusted for your staffing and rent plan</div>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar-top"><strong>Market depth</strong><span class="mono muted" id="val-market">—</span></div>
+              <div class="score-bar-track"><div class="score-bar-fill" id="bar-market" style="width:0%"></div></div>
+              <div class="small muted">County business establishment density</div>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar-top"><strong>Institutional support</strong><span class="mono muted" id="val-institutional">—</span></div>
+              <div class="score-bar-track"><div class="score-bar-fill" id="bar-institutional" style="width:0%"></div></div>
+              <div class="small muted">Chambers, SBA counselors and lenders serving the county</div>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar-top"><strong>Labor stability</strong><span class="mono muted" id="val-stability">—</span></div>
+              <div class="score-bar-track"><div class="score-bar-fill" id="bar-stability" style="width:0%"></div></div>
+              <div class="small muted">BLS LAUS county unemployment rate</div>
+            </div>
+          </div>
+          <div class="radar-wrap"><canvas id="radar-chart"></canvas></div>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-dark" id="resources-cta">— local resources</button>
+          <button class="btn btn-outline" id="compare-counties-btn-2">Compare with other counties</button>
+        </div>
+      </div>
+
+      <div class="source-grid">
+        <div class="card">
+          <div class="source-card-icon">📈</div>
+          <h3 style="font-size:16px;margin-bottom:8px;">Income & growth</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;">American Community Survey 5-year estimates for median household income and its five-year change, per county.</p>
+        </div>
+        <div class="card">
+          <div class="source-card-icon">🏢</div>
+          <h3 style="font-size:16px;margin-bottom:8px;">Wages & establishments</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;">Estimated weekly wage from ACS earnings data, and establishment counts from Census County Business Patterns.</p>
+        </div>
+        <div class="card">
+          <div class="source-card-icon">🏛️</div>
+          <h3 style="font-size:16px;margin-bottom:8px;">Institutional support</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;">Counted from the actual chambers, SBA counselors and lenders that serve each county in our directory.</p>
+        </div>
+      </div>
+
+      <div class="info-bar">
+        <span>ℹ️</span>
+        <span>Live figures come from the Census ACS 5-year API, Census County Business Patterns, and the BLS LAUS API, fetched when this page loads. Any metric that fails to load falls back to a cached snapshot, flagged above.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ COUNTY SNAPSHOT ============================ -->
+  <section id="page-counties" class="hidden">
+    <div class="hero" style="min-height:0;">
+      <div class="hero-overlay" style="background:var(--navy);"></div>
+      <div class="hero-inner small">
+        <div class="eyebrow">02 / COUNTY SNAPSHOT</div>
+        <h1 class="headline mid">The differences between Washington, Bristol and Providence are bigger than you think.</h1>
+        <p class="hero-lede">Same state, forty-five minutes apart — switch the metric below to see who actually leads, using live Census and BLS figures.</p>
+      </div>
+    </div>
+    <div class="page-section">
+      <div id="metric-pills"></div>
+      <div class="card card-shadow">
+        <div class="metric-header">
+          <h2 id="metric-title" style="margin:0;"></h2>
+          <span class="muted small" id="metric-leader"></span>
+        </div>
+        <div class="bar-chart-wrap"><canvas id="bar-chart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ RESOURCES ============================ -->
+  <section id="page-resources" class="hidden">
+    <div class="hero">
+      <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1543525238-63aa1dabce33?w=1600&q=60')"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-inner small">
+        <div class="eyebrow">03 / RESOURCES DIRECTORY</div>
+        <h1 class="headline mid">A weak score is not a no. It is a list of people to call.</h1>
+        <p class="hero-lede">Every organization below serves Rhode Island founders directly — free counseling, chamber networks, CDFI microloans and SBA-preferred lenders.</p>
+      </div>
+    </div>
+    <div class="page-section">
+      <div class="card card-shadow grid-2">
+        <div>
+          <label class="field-label" for="filter-county">County</label>
+          <select id="filter-county"></select>
+        </div>
+        <div>
+          <label class="field-label" for="filter-type">Type of help</label>
+          <select id="filter-type"></select>
+        </div>
+      </div>
+      <div class="resources-count" id="resources-count"></div>
+      <div class="resources-grid" id="resources-grid"></div>
+      <div class="card hidden" id="resources-empty">
+        <p class="muted">No organizations match those filters yet. Try a different county or type of help.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ SAVED SCORES ============================ -->
+  <section id="page-saved" class="hidden">
+    <div class="hero" style="min-height:0;">
+      <div class="hero-overlay" style="background:var(--navy);"></div>
+      <div class="hero-inner small">
+        <div class="eyebrow">04 / YOUR SAVED SCORES</div>
+        <h1 class="headline mid">Every plan you've run, in one place.</h1>
+        <p class="hero-lede">Saved to this browser under your account. Save a score from the estimator to add it here.</p>
+      </div>
+    </div>
+    <div class="page-section">
+      <div class="card card-shadow" id="saved-latest-card">
+        <h2 style="margin-bottom:8px;">Most recent</h2>
+        <div id="saved-latest"></div>
+      </div>
+      <div class="card" id="saved-history-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+          <h3 style="margin:0;">Saved history</h3>
+          <button class="btn btn-outline btn-sm" id="clear-saved-btn">Clear all</button>
+        </div>
+        <div id="saved-history"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <h3>SmallBizBoost RI</h3>
+      <p>Independent, open-data view of what it costs and takes to open a small business in Rhode Island.</p>
+    </div>
+    <div class="footer-cols">
+      <div class="footer-col">
+        <div class="footer-col-title">TOOLS</div>
+        <ul>
+          <li><button class="nav-pill" data-page="home" style="padding:0;">Feasibility estimator</button></li>
+          <li><button class="nav-pill" data-page="counties" style="padding:0;">County snapshot</button></li>
+          <li><button class="nav-pill" data-page="resources" style="padding:0;">Resources directory</button></li>
+        </ul>
+        <div class="footer-col-title">DATA SOURCES</div>
+        <ul class="plain">
+          <li>U.S. Census ACS 5-year estimates</li>
+          <li>Census County Business Patterns</li>
+          <li>BLS Local Area Unemployment Statistics</li>
+          <li>SBA / RISBDC counseling networks</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">CONTACT</div>
+        <ul class="plain">
+          <li>Providence, Rhode Island</li>
+          <li>aanviag15@gmail.com</li>
+          <li>(401) 526-2066</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 SmallBizBoost RI. Scores are estimates from public data, not financial advice.</div>
+</footer>
+
+<script src="auth.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
