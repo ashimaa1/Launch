@@ -1,12 +1,8 @@
 /* ------------------------------------------------------------------------
    auth.js — lightweight client-side accounts + score storage.
 
-   IMPORTANT: this is a front-end-only demo. Accounts and passwords are
-   stored in the browser's localStorage, in plain text, with no server
-   involved. Anyone using the same browser/profile can read them via
-   devtools. This is fine for prototyping the flow, but swap it for a
-   real backend (hashed passwords, a server-side session or token) before
-   this handles real users.
+   IMPORTANT: “This login is just pretend. Please don't use your original password. 
+   It’s saved openly in your browser, and anyone using the same browser can see it.”
    ------------------------------------------------------------------------ */
 
 const AUTH_USERS_KEY = "sbri_users";
@@ -95,7 +91,7 @@ function saveLatestScore(snapshot) {
   writeScoreData(data);
 }
 
-/** Append a snapshot to the signed-in user's score history (most recent first, capped). */
+/** Append a snapshot to the signed-in user's score history (most recent first). */
 function pushScoreHistory(snapshot) {
   if (!scoresStorageKey()) return;
   const data = readScoreData();
